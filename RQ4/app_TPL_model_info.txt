@@ -1,0 +1,101 @@
+MODEL RUN INFORMATION — Android app-log / third-party-library-log diagnostic scoring
+=====================================================================================
+
+Input file        : app_TPL.csv (612 rows; columns: Content = Android app log, surrounding_log = surrounding third-party library logs)
+Output file       : app_TPL_diagnosis_results.csv (612 rows, one per input row, same order; input_row == sample_id)
+Run date          : 2026-09-24 (America/New_York), 01:2x–02:00 EDT (rows 1–540) and 05:16–05:23 EDT (remaining 72 rows)
+
+1. MODEL
+--------
+Model name / ID           : Claude Fable 5.1  (API model ID: claude-fable-5-1, canonicalModel: claude-fable-5-1)
+Provider                  : Anthropic, first-party API (provider = "firstParty")
+Context window            : 1,000,000 tokens
+Max output tokens         : 64,000 tokens (default; not overridden)
+Auxiliary model           : claude-haiku-4-5-20251001 was invoked automatically by the client runtime once per call
+                            for internal housekeeping (short side-call, ~2.2k input / ~16 output tokens per call).
+                            It did NOT contribute to the diagnostic analysis; it is listed only so the cost/token
+                            accounting is complete.
+
+2. CONFIGURATION / INVOCATION
+-----------------------------
+Invocation method         : Anthropic Claude CLI in headless, non-interactive mode
+                            (`claude -p --output-format json --model claude-fable-5-1 --system-prompt "<minimal>" --tools "" --no-session-persistence`)
+                            spawned as a separate OS process per row from a Python driver (run_calls.py).
+Independence guarantee    : Every row = a brand-new session (fresh session_id, no persistence, no shared memory or
+                            context). Each call received ONLY: the fixed diagnostic prompt + that row's app log +
+                            that row's surrounding third-party library logs + "sample_id: <row number>".
+System prompt             : "You are a helpful assistant. Follow the user's instructions exactly." (the full task
+                            prompt supplied by the user was sent verbatim in the user turn, with the two log fields
+                            appended under an INPUT section).
+Tools                     : none enabled (pure text reasoning; no web search, no file access).
+Temperature / top_p       : not user-configurable in this interface; provider defaults were used.
+Extended thinking         : enabled by default in this client (355,525 thinking tokens across all successful calls).
+Prompt caching            : 1-hour ephemeral caching enabled by the client (the ~720-token system prompt and the
+                            per-call prompt were written to cache; because every prompt is unique there were no
+                            cache reads).
+Concurrency               : 10 parallel processes (first pass), 6 parallel processes (second pass).
+Output validation / retry : Each model reply was parsed as a single 17-column CSV row with integer scores in {0,1,2}.
+                            A reply that did not satisfy this was re-requested (fresh session each time), up to 3
+                            attempts per pass. Backslash-escaped quotes (\") were normalized to CSV "" on parsing.
+                            Final result: 612 / 612 rows parsed successfully; 0 rows fell back to raw output.
+                            Rows by number of successful model calls needed: 1 call = 504 rows, 2 calls = 90 rows,
+                            3 calls = 17 rows, 5 calls = 1 row (row 308).
+sample_id                 : the 1-based input row number (the input CSV has no ID column); the merge step enforces
+                            sample_id == input_row, so alignment with the input file is guaranteed.
+
+3. CALL COUNTS
+--------------
+Intended independent calls           : 612 (one per row)
+Successful Fable 5.1 model calls     : 740  (612 first-attempt + 128 re-requests due to malformed CSV output)
+Rejected calls (no model inference)  : 210  (account usage-limit rejections, "You've hit your limit", between
+                                             ~01:55 and 02:00 EDT; these consumed no tokens and were re-run after
+                                             the limit reset at 05:10 EDT)
+Total process invocations            : 950
+Auxiliary haiku side-calls           : 739
+
+4. TOKEN USAGE (all successful calls, as reported by the API in the CLI JSON result)
+------------------------------------------------------------------------------------
+claude-fable-5-1
+  Cache-creation input tokens        : 1,858,619   (this is where the prompt + logs were billed)
+  Uncached input tokens              : 1,480
+  Cache-read input tokens            : 0
+  Output tokens (incl. thinking)     : 1,106,839
+    of which thinking tokens         : 355,525
+  Total tokens                       : 2,966,938
+  Average per successful call        : ≈ 2,514 input tokens, ≈ 1,496 output tokens
+
+claude-haiku-4-5-20251001 (auxiliary, not part of the analysis)
+  Input tokens                       : 1,595,660
+  Output tokens                      : 11,663
+
+5. ESTIMATED COST (list prices, as computed by the client; costBasis = "list")
+-----------------------------------------------------------------------------
+claude-fable-5-1                     : USD 92.53
+claude-haiku-4-5-20251001 (aux)      : USD  1.65
+TOTAL                                : USD 94.18
+Average per input row                : USD 0.154
+Note: this run was executed under the user's Claude subscription, so the figure above is the list-price
+equivalent reported by the client, not an invoice amount. The 128 re-requests for malformed output are
+included; the 210 usage-limit rejections cost nothing.
+
+6. EXECUTION TIME
+-----------------
+Pass 1 (rows 1–612, 540 completed)   : 1,840 s  (30 min 40 s wall clock, 10 parallel)
+Pass 2 (72 remaining rows)           :   400 s  ( 6 min 40 s wall clock, 6 parallel)
+Total active wall-clock time         : 2,240 s ≈ 37 min 20 s
+Waiting for usage-limit reset        : ≈ 3 h 14 min (02:00 → 05:16 EDT; no processing)
+Summed per-call latency (all 950
+process invocations)                 : 19,983 s ≈ 5 h 33 min (≈ 27 s average per successful call)
+
+7. OUTPUT CSV COLUMNS
+---------------------
+input_row, sample_id,
+failure_characterization_info, failure_characterization_score, failure_characterization_evidence,
+fault_localization_info, fault_localization_score, fault_localization_evidence,
+cause_trigger_info, cause_trigger_score, cause_trigger_evidence,
+runtime_context_info, runtime_context_score, runtime_context_evidence,
+post_failure_behavior_info, post_failure_behavior_score, post_failure_behavior_evidence,
+overall_diagnosis,
+parse_status ("ok" for all 612 rows), raw_model_output (empty for all rows; reserved for unparsed replies),
+app_log, surrounding_log (the original input fields, copied for traceability)
+All text fields are double-quoted; scores are integers 0/1/2.

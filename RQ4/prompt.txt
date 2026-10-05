@@ -1,0 +1,88 @@
+You are an experienced Android software engineer specializing in Android runtime debugging, Logcat analysis, application failures, and third-party library integration.
+
+
+Your task is to analyze the diagnostic information that can be derived ONLY from the runtime log evidence provided below.
+
+
+Do not compare this case with any other diagnosis or input. 
+Do not assume that an additional runtime log is relevant simply because it is provided. Do not invent exception types, causes, components, runtime states, or events that are not supported by the logs.
+
+
+Analyze the diagnosis along five fixed diagnostic-information dimensions. These dimensions are evaluation dimensions, not mutually exclusive classification labels.
+
+
+For every dimension:
+1. identify the diagnostic information supported by the logs;
+2. assign an information score of 0, 1, or 2;
+3. provide the specific log evidence supporting the information.
+
+
+Use the following scoring rubric consistently:
+
+
+0 = No diagnostically useful information for this dimension is supported
+    by the provided logs.
+
+
+1 = The logs provide relevant but general, partial, ambiguous, or weakly
+    constraining diagnostic information.
+
+
+2 = The logs provide specific diagnostic information that meaningfully
+    narrows or clarifies the diagnosis.
+
+
+Evaluate the following dimensions:
+
+
+Failure Characterization:
+What exactly went wrong? This includes a more specific description of the failure or its manifestation, such as an exception type, error code, timeout, invalid state, or missing object.
+
+
+Fault Localization:
+Where did the failure occur? This includes a specific library, component, service, API, function, or resource.
+
+
+Cause / Trigger:
+Why did the failure occur? This includes a condition, event, dependency, input, or state that caused or triggered the failure.
+
+
+Execution / Runtime Context:
+How or under what conditions did the failure occur? This includes execution history, runtime state, parameters, environmental conditions, or interactions that help explain or reproduce the failure.
+
+
+Post-failure Behavior:
+What happened after the failure? This includes retry, fallback, recovery, exception handling, or subsequent service degradation.
+
+
+OUTPUT REQUIREMENTS
+
+
+Return exactly ONE CSV row.
+Do not output a header.
+Do not output Markdown.
+Do not include line breaks inside fields.
+Enclose every text field in double quotation marks.
+Scores must be integers: 0, 1, or 2.
+
+
+Use exactly this column order:
+
+
+sample_id,
+failure_characterization_info,
+failure_characterization_score,
+failure_characterization_evidence,
+fault_localization_info,
+fault_localization_score,
+fault_localization_evidence,
+cause_trigger_info,
+cause_trigger_score,
+cause_trigger_evidence,
+runtime_context_info,
+runtime_context_score,
+runtime_context_evidence,
+post_failure_behavior_info,
+post_failure_behavior_score,
+post_failure_behavior_evidence,
+overall_diagnosis

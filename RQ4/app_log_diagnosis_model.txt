@@ -1,0 +1,70 @@
+AI MODEL RUN INFORMATION
+========================================
+Task: Independent diagnostic analysis of 612 Android app log entries
+Run date: 2026-09-24 (America/New_York)
+
+MODEL
+  Model name/version : Claude Sonnet 4.6 (model ID: claude-sonnet-4-6)
+  Provider           : Anthropic (first-party API)
+  Invocation method  : Claude Code CLI, non-interactive mode (`claude -p`), one fresh
+                       process per log entry; no session persistence, no tools, no
+                       shared context between calls (each entry processed independently).
+
+CONFIGURATION PARAMETERS
+  System prompt      : "You are a precise assistant. Follow the user's output requirements exactly."
+  User prompt        : The supplied diagnostic prompt (verbatim), followed by
+                       "sample_id: <row index>" and "Runtime log: <CSV row content>"
+  Tools enabled      : none (--tools "")
+  Session persistence: disabled (--no-session-persistence)
+  Output format      : json (CLI wrapper); model instructed to emit exactly one CSV row
+  Temperature        : CLI default (not user-configurable in this mode)
+  Max output tokens  : CLI default (32,000)
+  Extended thinking  : off (0 thinking tokens recorded)
+  Concurrency        : 12 parallel worker processes
+  Retry policy       : up to 3 attempts per entry on transport/JSON error
+  sample_id          : 1-based row index of the input CSV (the input file has no ID column)
+
+CALL STATISTICS
+  Total input rows        : 612
+  Total model calls made  : 616 (612 first-pass calls + 4 independent
+                            re-runs for rows whose first output had malformed CSV quoting:
+                            rows 29, 109, 284, 389; re-runs used identical prompt/config;
+                            row 389 re-run used backslash-escaped quotes, normalised to CSV
+                            double-quote escaping during merge, content unchanged)
+  Stop reasons            : {'end_turn': 612}
+  Rows parsed to 17 cols  : 612
+  Rows with parse issues  : 0 
+
+TOKEN USAGE (summed over all 616 calls)
+  Input tokens (uncached) : 1,232
+  Cache-write tokens      : 991,024
+  Cache-read tokens       : 6,457
+  Output tokens           : 855,161
+  Total tokens            : 1,853,874
+  Avg input / call (incl. cache-write) : 1,611
+  Avg output / call                    : 1,388
+
+ESTIMATED COST (Anthropic list pricing for Claude Sonnet 4.6:
+  $3.00/M input, $15.00/M output, $3.75/M cache write, $0.30/M cache read)
+  Estimated cost          : $16.55
+  Cost reported by CLI    : $19.81
+
+EXECUTION TIME
+  Total wall-clock time (main batch of 612) : 1,485 s  (24.8 min)
+  Re-run of 4 rows (parallel)               : ~1 min additional
+  Sum of per-call latencies     : 17,754 s
+  Mean latency per call         : 28.8 s
+  Min / Max latency per call    : 14.8 s / 48.8 s
+
+SCORE DISTRIBUTIONS (count of 0 / 1 / 2 per dimension)
+  failure_characterization_score     : 0= 49  1=204  2=359
+  fault_localization_score           : 0= 45  1=258  2=309
+  cause_trigger_score                : 0=129  1=383  2=100
+  runtime_context_score              : 0=236  1=374  2=  2
+  post_failure_behavior_score        : 0=546  1= 44  2= 22
+
+OUTPUT FILE
+  app_log_diagnosis_results.csv — one row per input log entry, in input order.
+  Columns: row_index, input_log (the original log text), then the 17 prompt-specified
+  columns (sample_id ... overall_diagnosis), then parse_status and raw_model_output
+  (raw_model_output is populated only if the model's row could not be parsed).
